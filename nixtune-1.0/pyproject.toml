@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nixtune"
+version = "1.0.0"
+description = "NIXTUNE - maintenance, diagnostics and tuning for NixOS (PySide6 / KDE Plasma)"
+requires-python = ">=3.10"
+dependencies = ["PySide6"]
+
+[project.scripts]
+nixtune = "nixtune.app:main"
+nixtune-check-deps = "nixtune.cli:check_deps_main"
+
+[project.gui-scripts]
+nixtune-gui = "nixtune.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nixtune = ["assets/*.svg"]

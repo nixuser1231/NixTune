@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=NIXTUNE
+GenericName=NixOS Maintenance
+Comment=Monitor, clean, diagnose and tune your NixOS system
+Exec=nixtune
+Icon=nixtune
+Terminal=false
+Categories=System;Monitor;Qt;
+Keywords=nixos;nix;garbage;generations;maintenance;optimize;diagnostics;
+StartupNotify=true
+StartupWMClass=nixtune

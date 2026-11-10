@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Dependency checker: works without Qt. Usage: ./nixtune-check-deps [--explain]
+here="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+PYTHONPATH="$here/src${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m nixtune --check-deps "$@"

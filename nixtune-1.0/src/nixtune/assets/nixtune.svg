@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b2150"/>
+      <stop offset="1" stop-color="#0d1028"/>
+    </linearGradient>
+    <linearGradient id="arm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7ebae4"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="none" stroke="#3a4390" stroke-width="3"/>
+  <!-- six rounded arms rotated around the centre -->
+  <g transform="translate(128 128)" fill="url(#arm)">
+    <g id="a"><rect x="-13" y="-92" width="26" height="86" rx="13"/></g>
+    <use href="#a" transform="rotate(60)"/>
+    <use href="#a" transform="rotate(120)"/>
+    <use href="#a" transform="rotate(180)"/>
+    <use href="#a" transform="rotate(240)"/>
+    <use href="#a" transform="rotate(300)"/>
+  </g>
+  <circle cx="128" cy="128" r="22" fill="#0d1028" stroke="#7ebae4" stroke-width="4"/>
+  <circle cx="128" cy="128" r="7" fill="#a78bfa"/>
+</svg>

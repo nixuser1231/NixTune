@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""NIXTUNE privileged helper - run via `pkexec`, never by the GUI directly.
+
+Security properties
+-------------------
+* Accepts exactly ONE argument, which must be a key of ACTIONS. No free-form
+  arguments, paths, flags or environment input are ever forwarded.
+* Executes only root-owned tools located in fixed system directories.
+* Starts the tool with a scrubbed environment.
+* Uses only the Python standard library.
+* None of the actions delete system generations or modify configuration.
+
+`nixtune-helper --self-test` runs without root and prints what *would* be
+executed for each action (it executes nothing).
+"""
+
+import os
+import stat
+import sys
+import syslog
+
+# action -> (tool name, fixed arguments)
+ACTIONS = {
+    "gc": ("nix-store", ["--gc"]),
+    "optimise": ("nix-store", ["--optimise"]),
+}
+
+TOOL_DIRS = (
+    "/run/current-system/sw/bin",
+    "/nix/var/nix/profiles/default/bin",
+    "/usr/bin",
+    "/bin",
+)
+
+CLEAN_ENV = {
+    "PATH": ":".join(TOOL_DIRS),
+    "LC_ALL": "C",
+    "LANG": "C",
+    "HOME": "/root",
+}
+
+
+def trusted_executable(path):
+    """True if `path` resolves to an executable that only root can modify."""
+    try:
+        real = os.path.realpath(path)
+        st = os.stat(real)
+    except OSError:
+        return False
+    if not stat.S_ISREG(st.st_mode) or st.st_uid != 0:
+        return False
+    if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        return False
+    return os.access(real, os.X_OK)
+
+
+def trusted_directory(directory):
+    """True if only root can add, remove or rename entries in `directory`."""
+    try:
+        st = os.stat(os.path.realpath(directory))
+    except OSError:
+        return False
+    if st.st_uid != 0:
+        return False
+    return not (st.st_mode & (stat.S_IWGRP | stat.S_IWOTH)) or bool(st.st_mode & stat.S_ISVTX)
+
+
+def locate(tool):
+    """Return the path to execute for `tool`, or None if no trusted one exists.
+
+    Trust is verified on the resolved target, but the *unresolved* path is
+    returned on purpose: `nix-store` is a symlink to the multi-call `nix`
+    binary, which picks its behaviour from argv[0]. Executing the resolved
+    path would run `nix --gc` instead of `nix-store --gc`.
+    """
+    for directory in TOOL_DIRS:
+        candidate = os.path.join(directory, tool)
+        if os.path.exists(candidate) and trusted_directory(directory) and trusted_executable(candidate):
+            return candidate
+    return None
+
+
+def usage():
+    sys.stderr.write("usage: nixtune-helper {%s}\n" % "|".join(sorted(ACTIONS)))
+    return 2
+
+
+def self_test():
+    for action in sorted(ACTIONS):
+        tool, args = ACTIONS[action]
+        found = locate(tool)
+        print("%-9s -> %s" % (action, ("%s %s" % (found, " ".join(args))) if found else "tool not found"))
+    return 0
+
+
+def main(argv):
+    if len(argv) == 2 and argv[1] == "--self-test":
+        return self_test()
+    if len(argv) != 2 or argv[1] not in ACTIONS:
+        return usage()
+    if os.geteuid() != 0:
+        sys.stderr.write("nixtune-helper must be started through pkexec (needs root).\n")
+        return 77
+    action = argv[1]
+    tool, args = ACTIONS[action]
+    path = locate(tool)
+    if path is None:
+        sys.stderr.write("nixtune-helper: could not find a trusted '%s'.\n" % tool)
+        return 127
+    try:
+        syslog.openlog("nixtune-helper", syslog.LOG_PID, syslog.LOG_AUTH)
+        syslog.syslog(syslog.LOG_NOTICE, "uid=%s action=%s" % (os.environ.get("PKEXEC_UID", "?"), action))
+    except Exception:
+        pass
+    sys.stdout.flush()
+    os.execve(path, [path] + args, dict(CLEAN_ENV))
+    return 1  # unreachable
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
